@@ -9,11 +9,11 @@ from mmseg.models.utils import SELayer
 
 
 @HEADS.register_module()
-class LAPFormerPPHead_v2(BaseDecodeHead):
+class LAFormerHead(BaseDecodeHead):
     def __init__(self,
                  interpolate_mode='bilinear',
                  **kwargs):
-        super(LAPFormerPPHead_v2, self).__init__(
+        super(LAFormerHead, self).__init__(
             input_transform='multiple_select',
             **kwargs
         )
