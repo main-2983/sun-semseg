@@ -30,6 +30,8 @@ def parse_args():
                         help='visualize input features map to layer')
     parser.add_argument('--num-chans', default=None, type=int,
                         help='number of channels to visualize')
+    parser.add_argument('--avg', action='store_true',
+                        help='get spatial average across channels')
     parser.add_argument('--save-path', default=None, type=str,
                         help='path to save the visualization')
     parser.add_argument('--show', action='store_true',
@@ -59,7 +61,7 @@ def main():
         if len(hook.input) == 2:
             activation, hw_shape = hook.input
         else:
-            activation, hw_shape = hook.input, None
+            activation, hw_shape = hook.input[0], None
     else:
         if len(hook.output) == 2:
             activation, hw_shape = hook.output
@@ -76,16 +78,31 @@ def main():
         activation = nlc_to_nchw(activation, hw_shape)
     activation = activation[0].cpu().numpy()
     c, h, w = activation.shape
-    nrows, ncols = args.num_chans or int(np.sqrt(c)), args.num_chans or int(np.sqrt(c))
+    if args.avg:
+        activation = torch.mean(torch.tensor(activation), dim=0, keepdim=True)
+        activation = activation[0].cpu().numpy()
+        fig, ax = plt.subplots()
+        ax.imshow(activation)
+        if args.save_path is not None:
+            if not os.path.exists(args.save_path):
+                os.makedirs(args.save_path)
+            plt.savefig(f"{args.save_path}/vis_{args.layer}_avg.png")
+        if args.show:
+            plt.show()
+    c = args.num_chans or c
+    nrows, ncols = int(np.sqrt(c)), int(np.sqrt(c))
+    print("Creating subplot, please wait...")
     fig, axes = plt.subplots(nrows, ncols, figsize=(20, 20))
+    num_c = 0
     for i in tqdm(range(nrows)):
         for j in range(ncols):
-            axes[i, j].imshow(activation[i + j, :, :])
+            axes[i, j].imshow(activation[num_c, :, :])
             axes[i, j].axis('off')
+            num_c += 1
     if args.save_path is not None:
         if not os.path.exists(args.save_path):
             os.makedirs(args.save_path)
-        plt.savefig(f"{args.save_path}/vis_{layer}_{s}.png")
+        plt.savefig(f"{args.save_path}/vis_{args.layer}_{s}.png")
     if args.show:
         plt.show()
 
