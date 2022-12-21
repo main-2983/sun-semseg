@@ -1,6 +1,8 @@
 import argparse
 import sys
 import os
+
+import torch
 from tqdm import tqdm
 
 import matplotlib.pyplot as plt
@@ -10,6 +12,7 @@ from mmcv.cnn.utils import revert_sync_batchnorm
 
 from mmseg.core.hook.torch_hooks import IOHook
 from mmseg.apis.inference import init_segmentor, inference_segmentor
+from mmseg.models.utils import nlc_to_nchw
 
 
 def parse_args():
@@ -50,13 +53,28 @@ def main():
     inference_segmentor(model, args.data)
 
     s = "input" if args.input else "output"
+    _inp = hook.input
+    _out = hook.output
     if args.input:
-        activation = hook.input[0]
+        if len(hook.input) == 2:
+            activation, hw_shape = hook.input
+        else:
+            activation, hw_shape = hook.input, None
     else:
-        activation = hook.output
+        if len(hook.output) == 2:
+            activation, hw_shape = hook.output
+        else:
+            activation, hw_shape = hook.output, None
 
     print(f"Activation map at layer {str(layer)} has shape: {activation.shape}")
-    activation = activation[0].cpu().numpy() # drop batch dim
+    if activation.ndim == 3:
+        if hw_shape is None:
+            hw_shape = _inp[1] if len(_inp) == 2 else _out[1]
+        b, _, c = activation.shape
+        new_shape = (b, hw_shape[0], hw_shape[1], c)
+        print(f"Activation map had shape {activation.shape} is now reshaped to {new_shape}")
+        activation = nlc_to_nchw(activation, hw_shape)
+    activation = activation[0].cpu().numpy()
     c, h, w = activation.shape
     nrows, ncols = args.num_chans or int(np.sqrt(c)), args.num_chans or int(np.sqrt(c))
     fig, axes = plt.subplots(nrows, ncols, figsize=(20, 20))
