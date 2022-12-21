@@ -1,11 +1,12 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import argparse
 
+import torch
 from mmcv import Config
 from mmcv.cnn import get_model_complexity_info
+from mmcv.cnn.utils import revert_sync_batchnorm
 
 from mmseg.models import build_segmentor
-
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -17,6 +18,13 @@ def parse_args():
         nargs='+',
         default=[2048, 1024],
         help='input image size')
+    parser.add_argument(
+        '--device',
+        '-d',
+        type=str,
+        default='cuda:0',
+        help='model device'
+    )
     args = parser.parse_args()
     return args
 
@@ -24,6 +32,8 @@ def parse_args():
 def main():
 
     args = parse_args()
+
+    device = torch.device(args.device)
 
     if len(args.shape) == 1:
         input_shape = (3, args.shape[0], args.shape[0])
@@ -37,8 +47,10 @@ def main():
     model = build_segmentor(
         cfg.model,
         train_cfg=cfg.get('train_cfg'),
-        test_cfg=cfg.get('test_cfg')).cuda()
+        test_cfg=cfg.get('test_cfg'))
     model.eval()
+    model.to(device)
+    model = revert_sync_batchnorm(model)
 
     if hasattr(model, 'forward_dummy'):
         model.forward = model.forward_dummy
