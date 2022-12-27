@@ -173,8 +173,10 @@ def main():
                 img_show = img_show.copy()
                 seg = result[0]
                 color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8)
+
                 for label, color in enumerate(palette):
                     color_seg[seg == label, :] = color
+
                 # convert to BGR
                 color_seg = color_seg[..., ::-1]
 
@@ -194,7 +196,20 @@ def main():
 
                 fig, axes = plt.subplots(1, 2, figsize=(20, 10))
                 legend_handles = []
-                for idx, (c, p) in enumerate(zip(dataset.CLASSES, dataset.PALETTE)):
+
+                # store information about label and color of pred and gt
+                existing_labels, existing_colors = [], []
+                existing_labels_idxs = list(np.unique(seg))
+                existing_labels_idxs.extend(list(np.unique(gt_mask)))
+                existing_labels_idxs = set(existing_labels_idxs)
+                for _l in existing_labels_idxs:
+                    if _l != 255:
+                        existing_colors.append(dataset.PALETTE[_l])
+                for _l in existing_labels_idxs:
+                    if _l != 255:
+                        existing_labels.append(dataset.CLASSES[_l])
+
+                for idx, (c, p) in enumerate(zip(existing_labels, existing_colors)):
                     legend_handles.append(
                         mpatches.Patch(
                             color=np.asarray(p)/255,
