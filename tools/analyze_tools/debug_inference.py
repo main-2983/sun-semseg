@@ -178,7 +178,7 @@ def main():
                     color_seg[seg == label, :] = color
 
                 # convert to BGR
-                color_seg = color_seg[..., ::-1]
+                #color_seg = color_seg[..., ::-1]
 
                 pimg = img_show * (1 - args.opacity) + color_seg * args.opacity
                 pimg = pimg.astype(np.uint8)
@@ -189,7 +189,7 @@ def main():
                 for label, color in enumerate(palette):
                     color_gt[gt_mask == label, :] = color
                 # convert to BGR
-                color_gt = color_gt[..., ::-1]
+                #color_gt = color_gt[..., ::-1]
 
                 gtimg = img_show * (1 - args.opacity) + color_gt * args.opacity
                 gtimg = gtimg.astype(np.uint8)
